@@ -1,0 +1,10 @@
+{
+  "name": "muziqua",
+  "description": "Public Spotify listening history tracker",
+  "site": {
+    "installCommand": "npm install",
+    "buildCommand": "npm run build",
+    "serveCommand": "npm run dev",
+    "outputDirectory": "./dist"
+  }
+}

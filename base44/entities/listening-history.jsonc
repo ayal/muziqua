@@ -1,0 +1,46 @@
+{
+  "name": "ListeningHistory",
+  "type": "object",
+  "properties": {
+    "track_name": {
+      "type": "string",
+      "description": "Song title"
+    },
+    "artist_name": {
+      "type": "string",
+      "description": "Primary artist name"
+    },
+    "album_name": {
+      "type": "string",
+      "description": "Album title"
+    },
+    "album_image_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Album cover art URL from Spotify"
+    },
+    "spotify_track_id": {
+      "type": "string",
+      "description": "Spotify track ID for deduplication and linking"
+    },
+    "spotify_track_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Link to the track on Spotify"
+    },
+    "duration_ms": {
+      "type": "integer",
+      "description": "Track duration in milliseconds"
+    },
+    "played_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the track was played (from Spotify)"
+    }
+  },
+  "required": ["track_name", "artist_name", "played_at"],
+  "rls": {
+    "read": true,
+    "write": false
+  }
+}
