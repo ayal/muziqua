@@ -126,6 +126,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [hasMore, setHasMore] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const PAGE_SIZE = 50;
 
   const fetchTracks = useCallback(async (skip = 0) => {
@@ -171,6 +172,18 @@ export default function App() {
     fetchTracks(tracks.length);
   };
 
+  const syncNow = async () => {
+    setSyncing(true);
+    try {
+      await base44.functions.invoke("sync-spotify-history", {});
+      await fetchTracks(0);
+    } catch (err) {
+      console.error("Sync failed:", err);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // Group tracks by date
   const grouped = tracks.reduce((acc, track) => {
     const date = new Date(track.played_at).toDateString();
@@ -192,6 +205,26 @@ export default function App() {
           </div>
           <h1 className="text-white text-lg font-semibold">Muziqua</h1>
           <span className="text-zinc-500 text-sm">Ayal's Listening History</span>
+          <button
+            onClick={syncNow}
+            disabled={syncing}
+            className="ml-auto p-2 rounded-full hover:bg-white/10 transition-colors disabled:opacity-50"
+            title="Sync now"
+          >
+            <svg
+              className={`w-4 h-4 text-zinc-400 ${syncing ? "animate-spin" : ""}`}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </button>
         </div>
       </header>
 

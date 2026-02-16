@@ -96,7 +96,24 @@ Deno.serve(async (req: Request) => {
       synced++;
     }
 
-    return Response.json({ success: true, synced, total_fetched: items.length });
+    // Keep only the 50 most recent tracks
+    const MAX_TRACKS = 50;
+    const allTracks = await db.entities.ListeningHistory.filter({}, "-played_at", MAX_TRACKS + 50, 0);
+    if (allTracks.length > MAX_TRACKS) {
+      const toDelete = allTracks.slice(MAX_TRACKS);
+      let deleted = 0;
+      for (const old of toDelete) {
+        try {
+          await db.entities.ListeningHistory.delete(old.id);
+          deleted++;
+        } catch (_) {
+          // already deleted, skip
+        }
+      }
+      console.log("Cleanup: deleted", deleted, "old tracks");
+    }
+
+    return Response.json({ success: true, synced, deleted: allTracks.length > MAX_TRACKS ? allTracks.length - MAX_TRACKS : 0, total_fetched: items.length });
   } catch (error: any) {
     console.error("Error:", error);
     return Response.json({ success: false, error: error.message }, { status: 500 });
