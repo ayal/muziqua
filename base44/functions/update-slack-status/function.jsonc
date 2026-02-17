@@ -1,0 +1,15 @@
+{
+  "name": "update-slack-status",
+  "entry": "index.ts",
+  "automations": [
+    {
+      "name": "Update Slack Status",
+      "type": "scheduled",
+      "schedule_mode": "recurring",
+      "schedule_type": "simple",
+      "repeat_unit": "minutes",
+      "repeat_interval": 5,
+      "is_active": true
+    }
+  ]
+}

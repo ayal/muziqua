@@ -36,6 +36,11 @@
       "type": "string",
       "format": "date-time",
       "description": "When the track was played (from Spotify)"
+    },
+    "preview_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "URL to 30-second MP3 preview from Spotify"
     }
   },
   "required": ["track_name", "artist_name", "played_at"],

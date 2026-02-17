@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import base44 from "@/api/base44Client";
 
 function timeAgo(dateString) {
@@ -41,19 +41,25 @@ function groupConsecutiveRepeats(tracks) {
   return grouped;
 }
 
-function TrackCard({ track }) {
+function TrackCard({ track, isPlaying, onPlay }) {
+  const hasPreview = track.preview_url && track.preview_url !== "";
+
+  const handleRowClick = () => {
+    if (hasPreview) {
+      onPlay(track);
+    }
+  };
+
   return (
-    <a
-      href={track.spotify_track_url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 transition-colors group"
+    <div
+      onClick={handleRowClick}
+      className={`flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 transition-colors group ${hasPreview ? "cursor-pointer" : ""}`}
     >
       <div className="relative flex-shrink-0">
         <img
           src={track.album_image_url}
           alt={track.album_name}
-          className="w-14 h-14 rounded-md shadow-lg"
+          className={`w-14 h-14 rounded-md shadow-lg transition-opacity ${isPlaying ? "opacity-70" : ""}`}
           loading="lazy"
         />
         {track._count > 1 && (
@@ -61,9 +67,24 @@ function TrackCard({ track }) {
             {track._count}×
           </span>
         )}
+        {isPlaying && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg className="w-6 h-6 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16" />
+              <rect x="14" y="4" width="4" height="16" />
+            </svg>
+          </div>
+        )}
+        {!isPlaying && hasPreview && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+            <svg className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5,3 19,12 5,21" />
+            </svg>
+          </div>
+        )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-white font-medium truncate group-hover:text-green-400 transition-colors">
+        <p className={`font-medium truncate transition-colors ${isPlaying ? "text-green-400" : "text-white group-hover:text-green-400"}`}>
           {track.track_name}
         </p>
         <p className="text-zinc-400 text-sm truncate">
@@ -78,18 +99,26 @@ function TrackCard({ track }) {
           <p className="text-zinc-600 text-xs">{formatDuration(track.duration_ms)}</p>
         )}
       </div>
-      <svg
-        className="w-5 h-5 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-        viewBox="0 0 24 24"
-        fill="currentColor"
+      <a
+        href={track.spotify_track_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        title="Open in Spotify"
       >
-        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-      </svg>
-    </a>
+        <svg
+          className="w-5 h-5 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+        >
+          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+        </svg>
+      </a>
+    </div>
   );
 }
 
-function DateGroup({ date, tracks }) {
+function DateGroup({ date, tracks, playingId, onPlay }) {
   const dateObj = new Date(date);
   const isToday =
     dateObj.toDateString() === new Date().toDateString();
@@ -114,7 +143,12 @@ function DateGroup({ date, tracks }) {
       </h2>
       <div className="space-y-1">
         {groupConsecutiveRepeats(tracks).map((track, i) => (
-          <TrackCard key={track.id || `${track.played_at}-${i}`} track={track} />
+          <TrackCard
+            key={track.id || `${track.played_at}-${i}`}
+            track={track}
+            isPlaying={playingId === (track.id || track.played_at)}
+            onPlay={onPlay}
+          />
         ))}
       </div>
     </div>
@@ -127,7 +161,45 @@ export default function App() {
   const [error, setError] = useState(null);
   const [hasMore, setHasMore] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  const [playingId, setPlayingId] = useState(null);
+  const [nowPlaying, setNowPlaying] = useState(null);
+  const audioRef = useRef(null);
   const PAGE_SIZE = 50;
+
+  const fetchNowPlaying = useCallback(async () => {
+    try {
+      const res = await fetch("https://muziqua.base44.app/api/functions/get-now-playing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      const data = await res.json();
+      setNowPlaying(data.playing ? data : null);
+    } catch (_) {
+      setNowPlaying(null);
+    }
+  }, []);
+
+  const handlePlay = useCallback((track) => {
+    const trackKey = track.id || track.played_at;
+
+    if (playingId === trackKey) {
+      audioRef.current?.pause();
+      setPlayingId(null);
+      return;
+    }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+
+    const audio = new Audio(track.preview_url);
+    audio.volume = 0.5;
+    audio.play();
+    audio.onended = () => setPlayingId(null);
+    audioRef.current = audio;
+    setPlayingId(trackKey);
+  }, [playingId]);
 
   const fetchTracks = useCallback(async (skip = 0) => {
     try {
@@ -149,6 +221,12 @@ export default function App() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchNowPlaying();
+    const npInterval = setInterval(fetchNowPlaying, 30000);
+    return () => clearInterval(npInterval);
+  }, [fetchNowPlaying]);
 
   useEffect(() => {
     fetchTracks();
@@ -229,6 +307,75 @@ export default function App() {
       </header>
 
       <main className="max-w-2xl mx-auto px-4 py-6">
+        {nowPlaying && (
+          <div
+            onClick={() => nowPlaying.preview_url && handlePlay({ ...nowPlaying, id: "_now_playing" })}
+            className={`mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20 group ${nowPlaying.preview_url ? "cursor-pointer" : ""}`}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-green-400 text-xs font-semibold uppercase tracking-wider">Now Playing</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="relative flex-shrink-0">
+                <img
+                  src={nowPlaying.album_image_url}
+                  alt={nowPlaying.album_name}
+                  className={`w-16 h-16 rounded-md shadow-lg transition-opacity ${playingId === "_now_playing" ? "opacity-70" : ""}`}
+                />
+                {playingId === "_now_playing" && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <svg className="w-7 h-7 text-white drop-shadow" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="6" y="4" width="4" height="16" />
+                      <rect x="14" y="4" width="4" height="16" />
+                    </svg>
+                  </div>
+                )}
+                {playingId !== "_now_playing" && nowPlaying.preview_url && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                    <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5,3 19,12 5,21" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`font-semibold truncate transition-colors text-lg ${playingId === "_now_playing" ? "text-green-400" : "text-white group-hover:text-green-400"}`}>
+                  {nowPlaying.track_name}
+                </p>
+                <p className="text-zinc-400 text-sm truncate">
+                  {nowPlaying.artist_name}
+                  <span className="text-zinc-600 mx-1.5">&middot;</span>
+                  {nowPlaying.album_name}
+                </p>
+                {nowPlaying.duration_ms > 0 && (
+                  <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{ width: `${Math.min(100, (nowPlaying.progress_ms / nowPlaying.duration_ms) * 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+              <a
+                href={nowPlaying.spotify_track_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                title="Open in Spotify"
+              >
+                <svg
+                  className="w-6 h-6 text-green-500 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+                </svg>
+              </a>
+            </div>
+          </div>
+        )}
+
         {loading && (
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
@@ -251,7 +398,7 @@ export default function App() {
         )}
 
         {!loading && dateKeys.map((date) => (
-          <DateGroup key={date} date={date} tracks={grouped[date]} />
+          <DateGroup key={date} date={date} tracks={grouped[date]} playingId={playingId} onPlay={handlePlay} />
         ))}
 
         {!loading && hasMore && tracks.length > 0 && (

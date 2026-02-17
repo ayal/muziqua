@@ -68,8 +68,34 @@ Deno.serve(async (req: Request) => {
     const items = spotifyData.items || [];
     console.log("Step 7: Got", items.length, "items");
 
+    // Backfill preview_url for existing records that are missing it
+    const allExisting = await db.entities.ListeningHistory.filter({}, "-played_at", 50, 0);
+    const needBackfill = allExisting.filter((r: any) => r.spotify_track_id && (!r.preview_url || r.preview_url === ""));
+    let backfilled = 0;
+    if (needBackfill.length > 0) {
+      const trackIds = needBackfill.map((r: any) => r.spotify_track_id).join(",");
+      const tracksRes = await fetch(
+        `https://api.spotify.com/v1/tracks?ids=${trackIds}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (tracksRes.ok) {
+        const tracksData = await tracksRes.json();
+        const trackMap = new Map((tracksData.tracks || []).map((t: any) => [t.id, t.preview_url || ""]));
+        for (const record of needBackfill) {
+          const previewUrl = trackMap.get(record.spotify_track_id);
+          if (previewUrl) {
+            try {
+              await db.entities.ListeningHistory.update(record.id, { preview_url: previewUrl });
+              backfilled++;
+            } catch (_) { /* skip */ }
+          }
+        }
+        console.log("Backfilled preview_url for", backfilled, "tracks");
+      }
+    }
+
     if (items.length === 0) {
-      return Response.json({ success: true, message: "No new tracks", synced: 0 });
+      return Response.json({ success: true, message: "No new tracks", synced: 0, backfilled });
     }
 
     // Deduplicate
@@ -92,6 +118,7 @@ Deno.serve(async (req: Request) => {
         spotify_track_url: item.track.external_urls.spotify,
         duration_ms: item.track.duration_ms,
         played_at: item.played_at,
+        preview_url: item.track.preview_url || "",
       });
       synced++;
     }
