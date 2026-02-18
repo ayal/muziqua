@@ -1,0 +1,12 @@
+{
+  "name": "SyncState",
+  "type": "object",
+  "properties": {
+    "last_synced_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["last_synced_at"],
+  "rls": { "read": true, "write": false }
+}

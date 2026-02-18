@@ -6,6 +6,15 @@ Deno.serve(async (req: Request) => {
     const base44 = createClientFromRequest(req);
     const db = base44.asServiceRole;
 
+    // Throttle: skip if synced less than 3 minutes ago
+    const syncStates = await db.entities.SyncState.filter({}, "-last_synced_at", 1, 0);
+    if (syncStates.length > 0) {
+      const age = Date.now() - new Date(syncStates[0].last_synced_at).getTime();
+      if (age < 3 * 60 * 1000) {
+        return Response.json({ success: true, message: "Throttled", synced: 0 });
+      }
+    }
+
     console.log("Step 2: Checking env vars");
     const clientId = Deno.env.get("SPOTIFY_CLIENT_ID");
     const clientSecret = Deno.env.get("SPOTIFY_CLIENT_SECRET");
@@ -95,6 +104,12 @@ Deno.serve(async (req: Request) => {
     }
 
     if (items.length === 0) {
+      // Still update sync timestamp even if no new tracks
+      if (syncStates.length > 0) {
+        await db.entities.SyncState.update(syncStates[0].id, { last_synced_at: new Date().toISOString() });
+      } else {
+        await db.entities.SyncState.create({ last_synced_at: new Date().toISOString() });
+      }
       return Response.json({ success: true, message: "No new tracks", synced: 0, backfilled });
     }
 
@@ -138,6 +153,13 @@ Deno.serve(async (req: Request) => {
         }
       }
       console.log("Cleanup: deleted", deleted, "old tracks");
+    }
+
+    // Update sync timestamp
+    if (syncStates.length > 0) {
+      await db.entities.SyncState.update(syncStates[0].id, { last_synced_at: new Date().toISOString() });
+    } else {
+      await db.entities.SyncState.create({ last_synced_at: new Date().toISOString() });
     }
 
     return Response.json({ success: true, synced, deleted: allTracks.length > MAX_TRACKS ? allTracks.length - MAX_TRACKS : 0, total_fetched: items.length });

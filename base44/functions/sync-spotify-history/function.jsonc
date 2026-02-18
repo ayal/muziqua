@@ -1,15 +1,4 @@
 {
   "name": "sync-spotify-history",
-  "entry": "index.ts",
-  "automations": [
-    {
-      "name": "Sync Spotify History",
-      "type": "scheduled",
-      "schedule_mode": "recurring",
-      "schedule_type": "simple",
-      "repeat_unit": "minutes",
-      "repeat_interval": 5,
-      "is_active": true
-    }
-  ]
+  "entry": "index.ts"
 }

@@ -224,9 +224,28 @@ export default function App() {
 
   useEffect(() => {
     fetchNowPlaying();
-    const npInterval = setInterval(fetchNowPlaying, 30000);
+    const npInterval = setInterval(fetchNowPlaying, 15000);
     return () => clearInterval(npInterval);
   }, [fetchNowPlaying]);
+
+  const triggerSync = useCallback(() => {
+    fetch("https://muziqua.base44.app/api/functions/sync-spotify-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.synced > 0) fetchTracks();
+      })
+      .catch(() => {});
+  }, [fetchTracks]);
+
+  useEffect(() => {
+    triggerSync();
+    const syncInterval = setInterval(triggerSync, 3 * 60 * 1000);
+    return () => clearInterval(syncInterval);
+  }, [triggerSync]);
 
   useEffect(() => {
     fetchTracks();
